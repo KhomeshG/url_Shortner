@@ -1,15 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const urlController=require("../controller/urlShorter")
+const urlController = require("../controller/urlShorter");
 //=========testApi=========
-router.get("/test",function (req,res){
-    res.send("Hello Work")
+router.get("/test", function (req, res) {
+  res.send("Hello Work");
 });
 
+//shortnerUrl API
 
-router.post("/url/shorten",urlController.urlshorten)
+router.post("/url/shorten", urlController.urlshorten);
 
-router.get("/:urlCode",urlController.getUrlByParam)
+//get Url
 
+router.get("/:urlCode", urlController.getUrl);
 
-module.exports=router
+module.exports = router;
