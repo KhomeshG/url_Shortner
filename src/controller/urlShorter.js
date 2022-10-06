@@ -1,24 +1,38 @@
 const urlModel = require("../model/Urlmodel");
 const shortid = require("shortid");
-// const validUrl = require('valid-url');
-
-//regex for links(global)
-function validLink(link) {
-  return /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
-}
+const valiUrl = require("valid-url");
+const axios = require("axios");
 
 //shortUrl
 exports.urlShort = async function (req, res) {
   try {
-    //Checking Url (valid?/Not)
-    if (!validLink(req.body.longUrl)) {
+    //Not Accepting Empty req
+
+    if (Object.keys(req.body).length == 0) {
       return res
         .status(400)
-        .send({ status: false, msg: "Link is not in valid formate" });
+        .send({ status: false, msg: "Request Cant be empty" });
+    }
+
+    //Accepting link in String Format
+    if (typeof req.body.longUrl != "string") {
+      return res.status(400).send({
+        status: false,
+        msg: "LongURL can be in a String only!",
+      });
+    }
+
+    //Checking baseUrl (Valid?/Not)
+    if (!valiUrl.isUri(req.body.longUrl)) {
+      return res
+        .status(400)
+        .send({ status: false, msg: "Url is Not Valid URL " });
     }
 
     //handling Dublication(bcz if this link is already present in Our Db We have to send him/her Same Shorterner)
-    let duplicateUrl = await urlModel.findOne({ longUrl: req.body.longUrl });
+    let duplicateUrl = await urlModel
+      .findOne({ longUrl: req.body.longUrl })
+      .select({ _id: 0, __v: 0 });
 
     //if not Found then Create that url in Collection
     if (duplicateUrl == null) {
@@ -28,7 +42,7 @@ exports.urlShort = async function (req, res) {
       // let domain = new URL(urlStore.longUrl);
       //let baseUrl = "https://" + domain.hostname + "/" + shortUrll;
 
-      let baseUrl = "https://localhost:3000/" + shortUrl;
+      let baseUrl = "http://localhost:3000/" + shortUrl;
 
       //Creating
       let urlStore = await urlModel.create({
@@ -38,6 +52,7 @@ exports.urlShort = async function (req, res) {
       });
 
       return res.status(201).send({
+        status: true,
         data: {
           longUrl: urlStore.longUrl,
           shortUrl: urlStore.shortUrl,
@@ -48,14 +63,10 @@ exports.urlShort = async function (req, res) {
 
     //checking alreqady (Present?/Not)
     if (duplicateUrl.longUrl == req.body.longUrl) {
-      return res.status(200).send({
+      return res.status(201).send({
         status: true,
-        msg: " this link is already present",
-        data: {
-          longUrl: duplicateUrl.longUrl,
-          shortUrl: duplicateUrl.shortUrl,
-          urlCode: duplicateUrl.urlCode,
-        },
+        msg: " this Url is already present",
+        data: duplicateUrl,
       });
     }
   } catch (err) {
@@ -65,7 +76,7 @@ exports.urlShort = async function (req, res) {
 
 //getUrl
 
-const getUrlByParam = async function (req, res) {
+exports.getUrlByParam = async function (req, res) {
   try {
     //================Get URLCODE=========================
     let urlCode = req.params.urlCode;
@@ -87,14 +98,10 @@ const getUrlByParam = async function (req, res) {
     let findUrl = await urlModel.findOne({ urlCode: urlCode });
     if (!findUrl)
       return res.status(404).send({ status: false, message: "No URL found" });
-    longUrl = findUrl.longUrl;
+    // longUrl = findUrl.longUrl;
     //================Rediecting To Original URL=========================
     return res.status(302).redirect(findUrl.longUrl);
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
 };
-
-module.exports = { getUrlByParam };
-
-//GET URL API
